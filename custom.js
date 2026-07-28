@@ -40,7 +40,7 @@ style.innerHTML = `
   /* Mobile Phone Adjustments (Tripled in size) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 140px !important;
+      height: 120px !important;
     }
   }
 `;
@@ -68,7 +68,7 @@ function attachCustomMapOverlays() {
         homeBtn.onclick = function(e) {
             if (e) e.preventDefault();
             if (typeof map !== 'undefined') {
-                map.setView([53.2005, -0.30], 8.6);
+                map.setView([53.2005, -0.030], 8.6);
             }
         };
         mapContainer.appendChild(homeBtn);
