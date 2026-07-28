@@ -1,16 +1,37 @@
-// 1. Shrink Popups & Add Scrollbar (98px height)
+// 1. Shrink Popups & Add Responsive Logo Styles
 var style = document.createElement('style');
-style.innerHTML = '.leaflet-popup-content{font-size:9px!important;max-height:98px!important;overflow:auto!important;}';
+style.innerHTML = `
+  .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
+  .map-custom-logo {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    height: 240px;
+    width: auto;
+    background: #fff;
+    padding: 3px;
+    z-index: 2000;
+    pointer-events: none;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+  }
+  /* Mobile Phone Adjustments (Screens under 600px wide) */
+  @media (max-width: 600px) {
+    .map-custom-logo {
+      height: 80px !important;
+      max-width: 140px !important;
+    }
+  }
+`;
 document.head.appendChild(style);
 
 // Wait for map container to load, then attach overlays
 window.addEventListener('DOMContentLoaded', function() {
     var mapContainer = document.getElementById('map') || document.body;
 
-    // 2. Add Responsive Logo Image (240px on desktop, scales down on mobile)
+    // 2. Add Direct-URL Logo (No HTTP Redirects)
     var logo = document.createElement('img');
-    logo.src = 'https://github.com/DBx-Environ/MapImages/raw/main/Map.png';
-    logo.style.cssText = 'position:absolute;top:5px;right:5px;height:240px;max-height:20vh;max-width:35vw;width:auto;object-fit:contain;background:#fff;padding:3px;z-index:2000;pointer-events:none;box-shadow:0 1px 5px rgba(0,0,0,0.2);';
+    logo.className = 'map-custom-logo';
+    logo.src = 'https://raw.githubusercontent.com/DBx-Environ/MapImages/main/Map.png';
     mapContainer.appendChild(logo);
 
     // 3. Add Home Button (36px x 36px, positioned at top: 165px)
