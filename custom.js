@@ -1,11 +1,13 @@
-// 1. Popup CSS & Base Overlay Styles
+// 1. CSS Rules for PC & Mobile
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
 
-  /* PC Desktop Logo: 240px Height */
+  /* Desktop Logo: Locked inside top-right of map at 240px */
   #custom-map-logo {
-    position: fixed !important;
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
     height: 240px !important;
     width: auto !important;
     background: #ffffff !important;
@@ -16,9 +18,11 @@ style.innerHTML = `
     pointer-events: none !important;
   }
 
-  /* Fixed Home Button */
+  /* Home Button: Locked inside top-left of map */
   #custom-home-btn {
-    position: fixed !important;
+    position: absolute !important;
+    top: 165px !important;
+    left: 10px !important;
     width: 36px !important;
     height: 36px !important;
     background: #ffffff !important;
@@ -31,9 +35,10 @@ style.innerHTML = `
     justify-content: center !important;
     cursor: pointer !important;
     padding: 0 !important;
+    touch-action: manipulation !important;
   }
 
-  /* Mobile Phone Logo: 120px Height */
+  /* Mobile Screens: Scale logo down to 120px */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
       height: 120px !important;
@@ -42,40 +47,46 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-// 2. Attach Elements directly to body (The Mobile-Working Method)
-var logo = document.createElement('img');
-logo.id = 'custom-map-logo';
-logo.src = 'Map.png';
-document.body.appendChild(logo);
+// 2. Attach Elements Inside the Map Container
+function setupMapOverlays() {
+    var mapBox = document.getElementById('map') || document.body;
 
-var homeBtn = document.createElement('button');
-homeBtn.id = 'custom-home-btn';
-homeBtn.title = 'Reset to County Extent';
-homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
-
-homeBtn.onclick = function(e) {
-    if (e) e.preventDefault();
-    if (typeof map !== 'undefined') {
-        map.setView([53.005, -0.75], 8.6);
+    // Ensure map box allows absolute positioning
+    if (mapBox) {
+        mapBox.style.position = 'relative';
+    } else {
+        setTimeout(setupMapOverlays, 50);
+        return;
     }
-};
-document.body.appendChild(homeBtn);
 
-// 3. Dynamically Snap Elements to the #map Container on Screen
-function alignOverlaysToMap() {
-    var mapEl = document.getElementById('map') || document.body;
-    var rect = mapEl.getBoundingClientRect();
+    // Attach Logo (with automatic web fallback if local image is missing)
+    if (!document.getElementById('custom-map-logo')) {
+        var logo = document.createElement('img');
+        logo.id = 'custom-map-logo';
+        logo.src = 'https://raw.githubusercontent.com/DBx-Environ/MapImages/main/Map.png';
+        logo.onerror = function() { this.src = 'Map.png'; };
+        mapBox.appendChild(logo);
+    }
 
-    // Snap Logo 10px inside the top-right corner of the map canvas
-    logo.style.top = (rect.top + 10) + 'px';
-    logo.style.right = (window.innerWidth - rect.right + 10) + 'px';
+    // Attach Home Button
+    if (!document.getElementById('custom-home-btn')) {
+        var homeBtn = document.createElement('button');
+        homeBtn.id = 'custom-home-btn';
+        homeBtn.title = 'Reset to County Extent';
+        homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
 
-    // Snap Home Button 165px down on the left side of the map canvas
-    homeBtn.style.top = (rect.top + 165) + 'px';
-    homeBtn.style.left = (rect.left + 10) + 'px';
+        function resetView(e) {
+            if (e) e.preventDefault();
+            if (typeof map !== 'undefined' && map.setView) {
+                map.setView([53.0, 0.5], 8.6);
+            }
+        }
+
+        homeBtn.onclick = resetView;
+        homeBtn.ontouchstart = resetView;
+        mapBox.appendChild(homeBtn);
+    }
 }
 
-// Keep positions perfectly locked during window resizes and page scrolls
-window.addEventListener('resize', alignOverlaysToMap);
-window.addEventListener('scroll', alignOverlaysToMap);
-setInterval(alignOverlaysToMap, 200);
+// Run immediately
+setupMapOverlays();
