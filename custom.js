@@ -1,73 +1,67 @@
-// 1. Popup Styling & Desktop/Mobile Rules
+// 1. Popup CSS & Fixed Overlay Rules
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
-  
-  /* Desktop Logo: Locked at 240px */
-  .map-custom-logo {
+
+  /* Fixed Desktop Logo (240px) */
+  #custom-map-logo {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
     height: 240px !important;
     width: auto !important;
-    background: #fff;
-    padding: 3px;
-    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-    border-radius: 4px;
-    display: block;
+    background: #ffffff !important;
+    padding: 4px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    border-radius: 4px !important;
+    z-index: 99999 !important;
+    pointer-events: none !important;
   }
 
-  /* Mobile Phone Adjustments */
+  /* Fixed Home Button */
+  #custom-home-btn {
+    position: fixed !important;
+    top: 165px !important;
+    left: 10px !important;
+    width: 36px !important;
+    height: 36px !important;
+    background: #ffffff !important;
+    border: 2px solid rgba(0,0,0,0.2) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+  }
+
+  /* Mobile Adjustment (Screens under 768px) */
   @media screen and (max-width: 768px) {
-    .map-custom-logo {
-      height: 90px !important;
+    #custom-map-logo {
+      height: 85px !important;
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Attach Custom Map Controls
-function initCustomMapElements() {
-    if (typeof map === 'undefined' || typeof L === 'undefined') {
-        setTimeout(initCustomMapElements, 100);
-        return;
+// 2. Attach Logo directly to screen
+var logo = document.createElement('img');
+logo.id = 'custom-map-logo';
+logo.src = 'Map.png';
+document.body.appendChild(logo);
+
+// 3. Attach Home Button directly to screen
+var homeBtn = document.createElement('button');
+homeBtn.id = 'custom-home-btn';
+homeBtn.title = 'Reset to County Extent';
+homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+
+homeBtn.onclick = function(e) {
+    if (e) e.preventDefault();
+    if (typeof map !== 'undefined') {
+        map.setView([53.2005, -0.2530], 8.6);
     }
-
-    if (window._customMapInjected) return;
-    window._customMapInjected = true;
-
-    // Logo Control (Served locally from Vercel)
-    var LogoControl = L.Control.extend({
-        options: { position: 'topright' },
-        onAdd: function() {
-            var container = L.DomUtil.create('div');
-            container.innerHTML = '<img src="Map.png" class="map-custom-logo">';
-            return container;
-        }
-    });
-    map.addControl(new LogoControl());
-
-    // Home Button Control
-    var HomeControl = L.Control.extend({
-        options: { position: 'topleft' },
-        onAdd: function() {
-            var container = L.DomUtil.create('div', 'leaflet-bar');
-            var btn = L.DomUtil.create('a', '', container);
-            btn.href = '#';
-            btn.title = 'Reset to County Extent';
-            btn.style.cssText = 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#fff;cursor:pointer;';
-            btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
-            
-            L.DomEvent.disableClickPropagation(btn);
-            L.DomEvent.on(btn, 'click', function(e) {
-                L.DomEvent.preventDefault(e);
-                map.setView([53.2005, -0.2530], 8.6);
-            });
-            return container;
-        }
-    });
-    map.addControl(new HomeControl());
-}
-
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initCustomMapElements();
-} else {
-    document.addEventListener('DOMContentLoaded', initCustomMapElements);
-}
+};
+document.body.appendChild(homeBtn);
