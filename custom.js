@@ -1,78 +1,81 @@
-// 1. Inject Styles (240px on Desktop, 110px on Mobile)
+// 1. Popup CSS & Base Overlay Styles
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
 
-  /* Desktop Logo: Locked at 240px */
+  /* PC Desktop Logo: 240px Height */
   #custom-map-logo {
-    height: 240px;
-    width: auto;
-    display: block;
-    background: #ffffff;
-    padding: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    border-radius: 4px;
+    position: fixed !important;
+    height: 240px !important;
+    width: auto !important;
+    background: #ffffff !important;
+    padding: 4px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    border-radius: 4px !important;
+    z-index: 99999 !important;
+    pointer-events: none !important;
   }
 
-  /* Mobile Screens (Under 768px wide) */
+  /* Fixed Home Button */
+  #custom-home-btn {
+    position: fixed !important;
+    width: 36px !important;
+    height: 36px !important;
+    background: #ffffff !important;
+    border: 2px solid rgba(0,0,0,0.2) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4) !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+  }
+
+  /* Mobile Phone Logo: 120px Height */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 110px !important;
+      height: 120px !important;
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Inject Elements into Leaflet's Native Top Layer
-function injectLeafletControls() {
-    var topRight = document.querySelector('.leaflet-top.leaflet-right');
-    var topLeft = document.querySelector('.leaflet-top.leaflet-left');
+// 2. Attach Elements directly to body (The Mobile-Working Method)
+var logo = document.createElement('img');
+logo.id = 'custom-map-logo';
+logo.src = 'Map.png';
+document.body.appendChild(logo);
 
-    // If Leaflet hasn't built its control containers yet, try again in 50ms
-    if (!topRight || !topLeft) {
-        setTimeout(injectLeafletControls, 50);
-        return;
+var homeBtn = document.createElement('button');
+homeBtn.id = 'custom-home-btn';
+homeBtn.title = 'Reset to County Extent';
+homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+
+homeBtn.onclick = function(e) {
+    if (e) e.preventDefault();
+    if (typeof map !== 'undefined') {
+        map.setView([53.005, -0.75], 8.6);
     }
+};
+document.body.appendChild(homeBtn);
 
-    // --- Inject Logo (Top Right) ---
-    if (!document.getElementById('custom-map-logo')) {
-        var logoContainer = document.createElement('div');
-        logoContainer.className = 'leaflet-control';
-        logoContainer.style.cssText = 'margin: 10px; pointer-events: auto;';
-        logoContainer.innerHTML = '<img id="custom-map-logo" src="https://raw.githubusercontent.com/DBx-Environ/MapImages/main/Map.png">';
-        topRight.appendChild(logoContainer);
-    }
+// 3. Dynamically Snap Elements to the #map Container on Screen
+function alignOverlaysToMap() {
+    var mapEl = document.getElementById('map') || document.body;
+    var rect = mapEl.getBoundingClientRect();
 
-    // --- Inject Home Button (Top Left - Stacks under existing controls) ---
-    if (!document.getElementById('custom-home-btn')) {
-        var homeContainer = document.createElement('div');
-        homeContainer.className = 'leaflet-control leaflet-bar';
-        homeContainer.style.cssText = 'pointer-events: auto;';
-        
-        var homeBtn = document.createElement('a');
-        homeBtn.id = 'custom-home-btn';
-        homeBtn.href = '#';
-        homeBtn.title = 'Reset to County Extent';
-        homeBtn.style.cssText = 'width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#fff;cursor:pointer;';
-        homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+    // Snap Logo 10px inside the top-right corner of the map canvas
+    logo.style.top = (rect.top + 10) + 'px';
+    logo.style.right = (window.innerWidth - rect.right + 10) + 'px';
 
-        function doReset(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            if (typeof map !== 'undefined' && map.setView) {
-                map.setView([53.005, -0.530], 8.6);
-            }
-        }
-
-        homeBtn.onclick = doReset;
-        homeBtn.ontouchstart = doReset;
-        
-        homeContainer.appendChild(homeBtn);
-        topLeft.appendChild(homeContainer);
-    }
+    // Snap Home Button 165px down on the left side of the map canvas
+    homeBtn.style.top = (rect.top + 165) + 'px';
+    homeBtn.style.left = (rect.left + 10) + 'px';
 }
 
-// Start polling for Leaflet controls
-injectLeafletControls();
+// Keep positions perfectly locked during window resizes and page scrolls
+window.addEventListener('resize', alignOverlaysToMap);
+window.addEventListener('scroll', alignOverlaysToMap);
+setInterval(alignOverlaysToMap, 200);
