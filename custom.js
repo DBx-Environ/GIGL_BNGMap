@@ -1,11 +1,11 @@
-// 1. Popup CSS & Fixed Overlay Rules
+// 1. Popup CSS & Map Overlay Rules
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
 
-  /* Fixed Desktop Logo (240px) */
+  /* Desktop Logo (Locked to Map Top-Right at 240px) */
   #custom-map-logo {
-    position: fixed !important;
+    position: absolute !important;
     top: 10px !important;
     right: 10px !important;
     height: 240px !important;
@@ -20,7 +20,7 @@ style.innerHTML = `
 
   /* Fixed Home Button */
   #custom-home-btn {
-    position: fixed !important;
+    position: absolute !important;
     top: 165px !important;
     left: 10px !important;
     width: 36px !important;
@@ -37,31 +37,47 @@ style.innerHTML = `
     padding: 0 !important;
   }
 
-  /* Mobile Adjustment (Screens under 768px) */
+  /* Mobile Phone Adjustments (Tripled in size) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 85px !important;
+      height: 200px !important;
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Attach Logo directly to screen
-var logo = document.createElement('img');
-logo.id = 'custom-map-logo';
-logo.src = 'Map.png';
-document.body.appendChild(logo);
+// 2. Attach Elements Directly to the Map Container
+function attachCustomMapOverlays() {
+    var mapContainer = document.getElementById('map') || document.body;
 
-// 3. Attach Home Button directly to screen
-var homeBtn = document.createElement('button');
-homeBtn.id = 'custom-home-btn';
-homeBtn.title = 'Reset to County Extent';
-homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
-
-homeBtn.onclick = function(e) {
-    if (e) e.preventDefault();
-    if (typeof map !== 'undefined') {
-        map.setView([53.2005, -0.2530], 8.6);
+    // Attach Logo
+    if (!document.getElementById('custom-map-logo')) {
+        var logo = document.createElement('img');
+        logo.id = 'custom-map-logo';
+        logo.src = 'Map.png';
+        mapContainer.appendChild(logo);
     }
-};
-document.body.appendChild(homeBtn);
+
+    // Attach Home Button
+    if (!document.getElementById('custom-home-btn')) {
+        var homeBtn = document.createElement('button');
+        homeBtn.id = 'custom-home-btn';
+        homeBtn.title = 'Reset to County Extent';
+        homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+
+        homeBtn.onclick = function(e) {
+            if (e) e.preventDefault();
+            if (typeof map !== 'undefined') {
+                map.setView([53.2005, -0.01], 8.6);
+            }
+        };
+        mapContainer.appendChild(homeBtn);
+    }
+}
+
+// 3. Run immediately when map container is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachCustomMapOverlays);
+} else {
+    attachCustomMapOverlays();
+}
