@@ -68,7 +68,7 @@ function attachCustomMapOverlays() {
         homeBtn.onclick = function(e) {
             if (e) e.preventDefault();
             if (typeof map !== 'undefined') {
-                map.setView([53.2005, -0.01], 8.6);
+                map.setView([53.2005, -0.2530], 8.6);
             }
         };
         mapContainer.appendChild(homeBtn);
