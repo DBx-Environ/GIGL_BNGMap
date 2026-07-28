@@ -1,38 +1,39 @@
-// 1. Popup CSS & Responsive Logo Styling
+// 1. Popup CSS & Desktop/Mobile Logo Rules
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
+  
+  /* Desktop Logo: Locked at 240px */
   .map-custom-logo {
-    height: 160px;
-    width: auto;
+    height: 240px !important;
+    width: auto !important;
     background: #fff;
     padding: 3px;
     box-shadow: 0 1px 5px rgba(0,0,0,0.4);
     border-radius: 4px;
     display: block;
   }
-  @media (max-width: 600px) {
+
+  /* Mobile Screens (Under 768px wide) */
+  @media screen and (max-width: 768px) {
     .map-custom-logo {
-      height: 70px !important;
-      max-width: 110px !important;
+      height: 100px !important;
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Self-Healing Initialization Function
+// 2. Attach Custom Elements to Map
 function initCustomMapElements() {
-    // If Leaflet or the map variable isn't fully ready yet, check again in 100ms
     if (typeof map === 'undefined' || typeof L === 'undefined') {
         setTimeout(initCustomMapElements, 100);
         return;
     }
 
-    // Prevent duplicate controls if triggered twice
     if (window._customMapInjected) return;
     window._customMapInjected = true;
 
-    // --- Add Logo Control (Top Right) ---
+    // Logo Control (Top Right)
     var LogoControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function() {
@@ -43,7 +44,7 @@ function initCustomMapElements() {
     });
     map.addControl(new LogoControl());
 
-    // --- Add Home Button Control (Top Left) ---
+    // Home Button Control (Top Left)
     var HomeControl = L.Control.extend({
         options: { position: 'topleft' },
         onAdd: function() {
@@ -65,7 +66,6 @@ function initCustomMapElements() {
     map.addControl(new HomeControl());
 }
 
-// 3. Start checking immediately regardless of page state
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initCustomMapElements();
 } else {
