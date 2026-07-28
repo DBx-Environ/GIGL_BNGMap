@@ -1,4 +1,4 @@
-// 1. Popup CSS & Desktop/Mobile Logo Rules
+// 1. Popup Styling & Desktop/Mobile Rules
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
@@ -14,16 +14,16 @@ style.innerHTML = `
     display: block;
   }
 
-  /* Mobile Screens (Under 768px wide) */
+  /* Mobile Phone Adjustments */
   @media screen and (max-width: 768px) {
     .map-custom-logo {
-      height: 100px !important;
+      height: 90px !important;
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Attach Custom Elements to Map
+// 2. Attach Custom Map Controls
 function initCustomMapElements() {
     if (typeof map === 'undefined' || typeof L === 'undefined') {
         setTimeout(initCustomMapElements, 100);
@@ -33,18 +33,18 @@ function initCustomMapElements() {
     if (window._customMapInjected) return;
     window._customMapInjected = true;
 
-    // Logo Control (Top Right)
+    // Logo Control (Served locally from Vercel)
     var LogoControl = L.Control.extend({
         options: { position: 'topright' },
         onAdd: function() {
             var container = L.DomUtil.create('div');
-            container.innerHTML = '<img src="https://raw.githubusercontent.com/DBx-Environ/MapImages/main/Map.png" class="map-custom-logo">';
+            container.innerHTML = '<img src="Map.png" class="map-custom-logo">';
             return container;
         }
     });
     map.addControl(new LogoControl());
 
-    // Home Button Control (Top Left)
+    // Home Button Control
     var HomeControl = L.Control.extend({
         options: { position: 'topleft' },
         onAdd: function() {
