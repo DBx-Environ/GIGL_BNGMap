@@ -13,12 +13,12 @@ window.addEventListener('DOMContentLoaded', function() {
     logo.style.cssText = 'position:absolute;top:5px;right:5px;height:240px;background:#fff;padding:3px;z-index:2000;pointer-events:none;';
     mapContainer.appendChild(logo);
 
-    // 3. Add Plain Home Button (Positioned at top: 120px below Search control)
+    // 3. Add Home Button (36px x 36px, positioned at top: 165px)
     var homeBtn = document.createElement('button');
-    // Clean SVG line-art house icon (monochrome matching Leaflet buttons)
-    homeBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
+    // SVG icon enlarged to 18x18
+    homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
     homeBtn.title = 'Reset to County Extent';
-    homeBtn.style.cssText = 'position:absolute;top:120px;left:10px;z-index:2000;background:#fff;border:2px solid rgba(0,0,0,0.2);border-radius:4px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,0.45);padding:0;';
+    homeBtn.style.cssText = 'position:absolute;top:165px;left:10px;z-index:2000;background:#fff;border:2px solid rgba(0,0,0,0.2);border-radius:4px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,0.45);padding:0;';
 
     homeBtn.onclick = function() { 
         if (typeof map !== 'undefined') {
