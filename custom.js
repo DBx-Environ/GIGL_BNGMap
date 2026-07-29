@@ -110,9 +110,8 @@ function attachOverlays() {
 attachOverlays();
 window.addEventListener('resize', attachOverlays);
 
-
 // =========================================================
-// 3. LIVE CSV DATA INJECTOR (Direct Mapping Fix)
+// 3. LIVE CSV DATA INJECTOR (Bulletproof Version)
 // =========================================================
 
 function setupLiveData() {
@@ -121,9 +120,12 @@ function setupLiveData() {
         return;
     }
 
+    // Add a timestamp to the URL to force the browser to ALWAYS download the freshest CSVs
+    var cacheBuster = '?t=' + new Date().getTime();
+
     Promise.all([
-        fetch('BasicMapDataExport.csv').then(function(res) { return res.ok ? res.text() : ""; }),
-        fetch('BroadHabitatbySZ.csv').then(function(res) { return res.ok ? res.text() : ""; })
+        fetch('BasicMapDataExport.csv' + cacheBuster).then(function(res) { return res.ok ? res.text() : ""; }),
+        fetch('BroadHabitatbySZ.csv' + cacheBuster).then(function(res) { return res.ok ? res.text() : ""; })
     ])
     .then(function(files) {
         var basicData = parseCSV(files[0]);
@@ -165,25 +167,35 @@ function setupLiveData() {
             var liveRow = window.liveZoneData[szCode];
             if (!liveRow) return;
 
-            var popupNode = document.querySelector('.leaflet-popup-content');
-            if (!popupNode) return;
-            
-            var rows = popupNode.querySelectorAll('tr');
-            rows.forEach(function(row) {
-                var th = row.querySelector('th');
-                var td = row.querySelector('td');
-                if (!th || !td) return;
+            // Wait 10 milliseconds to ensure Leaflet has fully injected the popup HTML into the screen
+            setTimeout(function() {
+                var popupNode = document.querySelector('.leaflet-popup-content');
+                if (!popupNode) return;
                 
-                var label = th.innerText.trim();
-                
-                // Check if this row matches any of our known data fields based on popup labels
-                for (var propKey in liveRow) {
-                    if (label.includes(propKey.replace(/_/g, ' ')) || propKey.endsWith(label)) {
-                        td.innerHTML = liveRow[propKey];
-                        break;
+                var rows = popupNode.querySelectorAll('tr');
+                rows.forEach(function(row) {
+                    // Grab ALL cells in the row, whether qgis2web made them <th> or <td>
+                    var cells = row.querySelectorAll('th, td');
+                    if (cells.length < 2) return; 
+                    
+                    var labelCell = cells[0];
+                    var valueCell = cells[cells.length - 1]; // The last cell holds the number
+                    
+                    // Clean up the label (removes trailing colons or spaces)
+                    var label = labelCell.innerText.trim().replace(/:$/, '').trim();
+                    
+                    for (var propKey in liveRow) {
+                        // Match the exact QGIS property name
+                        if (propKey.endsWith('_' + label) || label === propKey) {
+                            // If the CSV has data for this, overwrite the static map data!
+                            if (liveRow[propKey] !== undefined && liveRow[propKey] !== "") {
+                                valueCell.innerHTML = liveRow[propKey];
+                            }
+                            break;
+                        }
                     }
-                }
-            });
+                });
+            }, 10);
         });
     })
     .catch(function(err) {
@@ -193,7 +205,7 @@ function setupLiveData() {
 
 // Robust CSV Parser
 function parseCSV(text) {
-    text = text.replace(/^\uFEFF/, '');
+    text = text.replace(/^\uFEFF/, ''); // Strip invisible Excel characters
     var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
     if (lines.length === 0) return [];
     
