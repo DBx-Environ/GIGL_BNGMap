@@ -35,7 +35,7 @@ style.innerHTML = `
   /* Mobile Adjustment (Screens under 768px) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 120px !important; /* Scaled to 120px */
+      height: 80px !important; /* Scaled to 120px */
     }
   }
 `;
@@ -76,7 +76,7 @@ function addLeafletControls() {
                 // Use Leaflet's native event blocker to stop clicks hitting the map behind it
                 btn.onclick = function(e) {
                     L.DomEvent.stopPropagation(e);
-                    map.setView([53.2005, -0.2530], 8.6);
+                    map.setView([53.1, 0], 8.6);
                 };
                 return btn;
             }
