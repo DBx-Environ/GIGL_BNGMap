@@ -13,7 +13,7 @@
         <link rel="stylesheet" href="css/leaflet.photon.css">
         <style>
         #map {
-            width: 850px;
+            width: 656px;
             height: 923px;
         }
         </style>
@@ -38,7 +38,7 @@
         <script>
         var map = L.map('map', {
             zoomControl:false, maxZoom:15, minZoom:3
-        }).fitBounds([[52.52178183171248,-0.9551670812964133],[53.66533852362111,0.7983353701520514]]);
+        }).fitBounds([[52.51541947919112,-0.9678699169824225],[53.6591430410692,0.3844774925073131]]);
         var hash = new L.Hash(map);
         map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
         var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
@@ -207,7 +207,7 @@
                 weight: 1.0, 
                 fill: true,
                 fillOpacity: 1,
-                fillColor: 'rgba(232,246,227,0.502)',
+                fillColor: 'rgba(196,225,187,0.502)',
                 interactive: false,
             }
                     break;
