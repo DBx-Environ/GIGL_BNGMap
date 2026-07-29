@@ -12,9 +12,11 @@
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         <link rel="stylesheet" href="css/leaflet.photon.css">
         <style>
-        #map {
-            width: 656px;
-            height: 923px;
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
         }
         </style>
         <title>Lincs BNG Finder</title>
@@ -38,7 +40,7 @@
         <script>
         var map = L.map('map', {
             zoomControl:false, maxZoom:15, minZoom:3
-        }).fitBounds([[52.51541947919112,-0.9678699169824225],[53.6591430410692,0.3844774925073131]]);
+        }).fitBounds([[52.60636960672067,-1.2607766576421335],[53.74865614497302,0.6742556203589842]]);
         var hash = new L.Hash(map);
         map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
         var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
@@ -505,6 +507,6 @@
         map.on("layerremove", function(){
             resetLabels([layer_LincsLPAs_1]);
         });
-        </script>
+        </script>        
     </body>
 </html>
