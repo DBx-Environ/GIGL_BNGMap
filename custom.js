@@ -111,7 +111,7 @@ attachOverlays();
 window.addEventListener('resize', attachOverlays);
 
 // =========================================================
-// 3. LIVE CSV DATA INJECTOR (Bulletproof Version)
+// 3. LIVE CSV DATA INJECTOR (Dynamic Fieldname Fix)
 // =========================================================
 
 function setupLiveData() {
@@ -120,7 +120,6 @@ function setupLiveData() {
         return;
     }
 
-    // Add a timestamp to the URL to force the browser to ALWAYS download the freshest CSVs
     var cacheBuster = '?t=' + new Date().getTime();
 
     Promise.all([
@@ -133,32 +132,34 @@ function setupLiveData() {
         
         window.liveZoneData = {};
         
-        // Map Basic Map Data
-        basicData.forEach(function(row) {
-            var szCode = parseFloat(row['SZCode']);
-            if (!isNaN(szCode)) {
-                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
-                window.liveZoneData[szCode]['BasicMapDataExport_Area'] = row['Area'];
-                window.liveZoneData[szCode]['BasicMapDataExport_Hedgerow'] = row['Hedgerow'];
-                window.liveZoneData[szCode]['BasicMapDataExport_Watercourse'] = row['Watercourse'];
-                window.liveZoneData[szCode]['BasicMapDataExport_PopHeader'] = row['PopHeader'];
-            }
-        });
-
-        // Map Broad Habitats Data
-        habitatData.forEach(function(row) {
-            var szCode = parseFloat(row['SZCode']);
-            if (!isNaN(szCode)) {
-                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
-                for (var key in row) {
-                    if (key !== 'SZCode' && key !== 'LPA' && key !== 'NCA') {
-                        window.liveZoneData[szCode]['BroadHabitatbySZ_' + key] = row[key];
+        // Dynamic mapper that ignores invisible Excel characters in column names
+        function processCSV(data, prefix) {
+            data.forEach(function(row) {
+                // Safely find the SZCode column by stripping out everything but letters and numbers
+                var szKey = Object.keys(row).find(function(k) { 
+                    return k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === 'szcode'; 
+                });
+                
+                var szCode = szKey ? parseFloat(row[szKey]) : NaN;
+                
+                if (!isNaN(szCode)) {
+                    if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
+                    
+                    for (var key in row) {
+                        var cleanKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                        if (cleanKey !== 'szcode' && cleanKey !== 'lpa' && cleanKey !== 'nca') {
+                            // Recreate the exact QGIS property name (e.g., "BasicMapDataExport_Area")
+                            var qgisPropName = prefix + '_' + key.trim();
+                            window.liveZoneData[szCode][qgisPropName] = row[key];
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
-        // Intercept popup rendering
+        processCSV(basicData, 'BasicMapDataExport');
+        processCSV(habitatData, 'BroadHabitatbySZ');
+
         map.on('popupopen', function(e) {
             var feature = e.popup._source.feature;
             if (!feature || !feature.properties || feature.properties.SZCode == null) return;
@@ -167,31 +168,29 @@ function setupLiveData() {
             var liveRow = window.liveZoneData[szCode];
             if (!liveRow) return;
 
-            // Wait 10 milliseconds to ensure Leaflet has fully injected the popup HTML into the screen
             setTimeout(function() {
                 var popupNode = document.querySelector('.leaflet-popup-content');
                 if (!popupNode) return;
                 
                 var rows = popupNode.querySelectorAll('tr');
                 rows.forEach(function(row) {
-                    // Grab ALL cells in the row, whether qgis2web made them <th> or <td>
+                    // Look for ANY cells, regardless of whether qgis2web made them TH or TD tags
                     var cells = row.querySelectorAll('th, td');
                     if (cells.length < 2) return; 
                     
                     var labelCell = cells[0];
-                    var valueCell = cells[cells.length - 1]; // The last cell holds the number
+                    var valueCell = cells[cells.length - 1]; 
                     
-                    // Clean up the label (removes trailing colons or spaces)
                     var label = labelCell.innerText.trim().replace(/:$/, '').trim();
                     
+                    // Overwrite matching data
                     for (var propKey in liveRow) {
-                        // Match the exact QGIS property name
-                        if (propKey.endsWith('_' + label) || label === propKey) {
-                            // If the CSV has data for this, overwrite the static map data!
-                            if (liveRow[propKey] !== undefined && liveRow[propKey] !== "") {
+                        // Matches exact QGIS names like "BasicMapDataExport_Area" or just "Area"
+                        if (propKey === label || propKey.endsWith('_' + label)) {
+                            // Don't overwrite if the live data cell is completely empty in your spreadsheet
+                            if (liveRow[propKey] !== undefined && liveRow[propKey].trim() !== "") {
                                 valueCell.innerHTML = liveRow[propKey];
                             }
-                            break;
                         }
                     }
                 });
@@ -203,9 +202,9 @@ function setupLiveData() {
     });
 }
 
-// Robust CSV Parser
 function parseCSV(text) {
-    text = text.replace(/^\uFEFF/, ''); // Strip invisible Excel characters
+    // Strip hidden Excel characters (BOM) that break Javascript object keys
+    text = text.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
     var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
     if (lines.length === 0) return [];
     
@@ -216,7 +215,9 @@ function parseCSV(text) {
         var cols = parseCSVLine(lines[i]);
         var obj = {};
         for (var j = 0; j < headers.length; j++) {
-            obj[headers[j]] = cols[j] || "";
+            // Also strip hidden characters from the individual header names
+            var cleanHeader = (headers[j] || "").replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+            obj[cleanHeader] = cols[j] || "";
         }
         result.push(obj);
     }
