@@ -3,7 +3,7 @@ var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
 
-  /* Base Styles for Logo */
+  /* Base Styles for Custom Logo */
   #custom-map-logo {
     background: #ffffff !important;
     padding: 4px !important;
@@ -13,7 +13,7 @@ style.innerHTML = `
     pointer-events: none !important;
   }
 
-  /* Base Styles for Home Button */
+  /* Base Styles for Custom Home Button */
   #custom-home-btn {
     width: 36px !important;
     height: 36px !important;
@@ -34,14 +34,14 @@ style.innerHTML = `
     #custom-map-logo {
       position: absolute !important;
       top: 10px !important;
-      left: 10px !important; /* Top Left */
+      left: 10px !important; /* Set to Top Left */
       height: 240px !important;
       width: auto !important;
     }
     #custom-home-btn {
       position: absolute !important;
-      top: 175px !important; 
-      right: 10px !important; /* Top Right */
+      top: 175px !important; /* Below the native tools */
+      right: 10px !important; /* Set to Top Right */
     }
   }
 
@@ -50,50 +50,39 @@ style.innerHTML = `
     #custom-map-logo {
       position: fixed !important; 
       top: 10px !important;
-      left: 10px !important; /* Top Left */
-      height: 180px !important; /* 180px scale */
+      left: 10px !important; /* Set to Top Left */
+      height: 180px !important; /* Your ideal 180px scale */
       width: auto !important;
     }
     #custom-home-btn {
       position: fixed !important; 
-      top: 175px !important; 
-      right: 10px !important; /* Top Right */
+      top: 175px !important; /* Below the native tools */
+      right: 10px !important; /* Set to Top Right */
     }
   }
 
-  /* --- THE CSS FLIP: Safely swap Leaflet corners without breaking mobile scripts --- */
-  
-  /* 1. Visually force the Top-Left container to the right side */
+  /* --- GENTLE NATIVE CONTROL SHIFT --- */
+  /* Move qgis2web's native top-left controls to the right corner without breaking mobile layouts */
   .leaflet-top.leaflet-left {
     left: auto !important;
     right: 0px !important;
-    z-index: 9999 !important; 
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important; /* Flexbox safely aligns items to the right edge */
+    max-width: 100vw !important; /* Prevents 100%-width titles from shooting offscreen */
+    pointer-events: none !important; /* Allows map clicks to pass through the empty container space */
   }
-  /* Fix the alignment of items inside it so they hug the right wall */
+  
   .leaflet-top.leaflet-left .leaflet-control {
-    float: right !important;
-    clear: both !important;
-    margin-right: 10px !important;
     margin-left: 0 !important;
-  }
-
-  /* 2. Move the original Top-Right container to the left side (prevents overlap) */
-  .leaflet-top.leaflet-right {
-    right: auto !important;
-    left: 0px !important;
-    top: 260px !important; /* Pushed down safely below your custom logo */
-  }
-  /* Fix alignment for any layers/controls that were in the top right */
-  .leaflet-top.leaflet-right .leaflet-control {
-    float: left !important;
-    clear: both !important;
-    margin-left: 10px !important;
-    margin-right: 0 !important;
+    margin-right: 10px !important;
+    float: none !important; /* Strips any floats that might crash mobile formatting */
+    pointer-events: auto !important; /* Restores clickability to the buttons themselves */
   }
 `;
 document.head.appendChild(style);
 
-// 2. Dynamic Placement Logic
+// 2. Dynamic Placement Logic for Custom Elements
 function setupResponsiveOverlays() {
     // Create Logo
     var logo = document.getElementById('custom-map-logo');
