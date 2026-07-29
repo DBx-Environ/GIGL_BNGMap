@@ -111,7 +111,7 @@ attachOverlays();
 window.addEventListener('resize', attachOverlays);
 
 // =========================================================
-// 3. LIVE CSV DATA INJECTOR (Dynamic Fieldname Fix)
+// 3. LIVE CSV DATA INJECTOR (Explicit Alias Mapping)
 // =========================================================
 
 function setupLiveData() {
@@ -120,6 +120,7 @@ function setupLiveData() {
         return;
     }
 
+    // Cache buster guarantees the map downloads the freshest CSV file
     var cacheBuster = '?t=' + new Date().getTime();
 
     Promise.all([
@@ -132,34 +133,43 @@ function setupLiveData() {
         
         window.liveZoneData = {};
         
-        // Dynamic mapper that ignores invisible Excel characters in column names
-        function processCSV(data, prefix) {
-            data.forEach(function(row) {
-                // Safely find the SZCode column by stripping out everything but letters and numbers
-                var szKey = Object.keys(row).find(function(k) { 
-                    return k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === 'szcode'; 
-                });
-                
-                var szCode = szKey ? parseFloat(row[szKey]) : NaN;
-                
-                if (!isNaN(szCode)) {
-                    if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
-                    
-                    for (var key in row) {
-                        var cleanKey = key.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                        if (cleanKey !== 'szcode' && cleanKey !== 'lpa' && cleanKey !== 'nca') {
-                            // Recreate the exact QGIS property name (e.g., "BasicMapDataExport_Area")
-                            var qgisPropName = prefix + '_' + key.trim();
-                            window.liveZoneData[szCode][qgisPropName] = row[key];
-                        }
-                    }
+        // Helper to safely find the SZCode column, ignoring invisible Excel characters
+        function getSZCode(row) {
+            var keys = Object.keys(row);
+            for(var i=0; i<keys.length; i++) {
+                if (keys[i].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === 'szcode') {
+                    return parseFloat(row[keys[i]]);
                 }
-            });
+            }
+            return NaN;
         }
 
-        processCSV(basicData, 'BasicMapDataExport');
-        processCSV(habitatData, 'BroadHabitatbySZ');
+        // 1. Process BasicMapDataExport (Save exactly as named in the CSV)
+        basicData.forEach(function(row) {
+            var szCode = getSZCode(row);
+            if (!isNaN(szCode)) {
+                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
+                
+                window.liveZoneData[szCode]['BasicMapDataExport_Area'] = row['Area'] || "";
+                window.liveZoneData[szCode]['BasicMapDataExport_Hedgerow'] = row['Hedgerow'] || "";
+                window.liveZoneData[szCode]['BasicMapDataExport_Watercourse'] = row['Watercourse'] || "";
+                window.liveZoneData[szCode]['BasicMapDataExport_PopHeader'] = row['PopHeader'] || "";
+            }
+        });
 
+        // 2. Process BroadHabitats
+        habitatData.forEach(function(row) {
+            var szCode = getSZCode(row);
+            if (!isNaN(szCode)) {
+                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
+                for (var key in row) {
+                    var cleanKey = key.trim();
+                    window.liveZoneData[szCode]['BroadHabitatbySZ_' + cleanKey] = row[key];
+                }
+            }
+        });
+
+        // 3. Intercept Popups and Translate QGIS Aliases
         map.on('popupopen', function(e) {
             var feature = e.popup._source.feature;
             if (!feature || !feature.properties || feature.properties.SZCode == null) return;
@@ -174,24 +184,38 @@ function setupLiveData() {
                 
                 var rows = popupNode.querySelectorAll('tr');
                 rows.forEach(function(row) {
-                    // Look for ANY cells, regardless of whether qgis2web made them TH or TD tags
                     var cells = row.querySelectorAll('th, td');
                     if (cells.length < 2) return; 
                     
                     var labelCell = cells[0];
                     var valueCell = cells[cells.length - 1]; 
                     
+                    // This is the label exactly as qgis2web printed it in the popup
                     var label = labelCell.innerText.trim().replace(/:$/, '').trim();
                     
-                    // Overwrite matching data
-                    for (var propKey in liveRow) {
-                        // Matches exact QGIS names like "BasicMapDataExport_Area" or just "Area"
-                        if (propKey === label || propKey.endsWith('_' + label)) {
-                            // Don't overwrite if the live data cell is completely empty in your spreadsheet
-                            if (liveRow[propKey] !== undefined && liveRow[propKey].trim() !== "") {
-                                valueCell.innerHTML = liveRow[propKey];
-                            }
-                        }
+                    var dataKey = null;
+                    
+                    // --- THE MAGIC ALIAS TRANSLATION DICTIONARY ---
+                    if (label === 'Area Units') { 
+                        dataKey = 'BasicMapDataExport_Area'; 
+                    }
+                    else if (label === 'Hedge Units') { 
+                        dataKey = 'BasicMapDataExport_Hedgerow'; 
+                    }
+                    else if (label === 'Water Units') { 
+                        dataKey = 'BasicMapDataExport_Watercourse'; 
+                    }
+                    else if (label === 'PopHeader') { 
+                        dataKey = 'BasicMapDataExport_PopHeader'; 
+                    }
+                    else {
+                        // BroadHabitat didn't use Aliases, so their labels match perfectly
+                        dataKey = 'BroadHabitatbySZ_' + label;
+                    }
+
+                    // If a match is found in the dictionary, replace the static map data with the Live CSV data
+                    if (dataKey && liveRow[dataKey] !== undefined && liveRow[dataKey] !== "") {
+                        valueCell.innerHTML = liveRow[dataKey];
                     }
                 });
             }, 10);
@@ -203,7 +227,6 @@ function setupLiveData() {
 }
 
 function parseCSV(text) {
-    // Strip hidden Excel characters (BOM) that break Javascript object keys
     text = text.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
     var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
     if (lines.length === 0) return [];
@@ -215,7 +238,6 @@ function parseCSV(text) {
         var cols = parseCSVLine(lines[i]);
         var obj = {};
         for (var j = 0; j < headers.length; j++) {
-            // Also strip hidden characters from the individual header names
             var cleanHeader = (headers[j] || "").replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
             obj[cleanHeader] = cols[j] || "";
         }
