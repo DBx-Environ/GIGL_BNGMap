@@ -34,14 +34,14 @@ style.innerHTML = `
     #custom-map-logo {
       position: absolute !important;
       top: 10px !important;
-      left: 10px !important; /* Set to Top Left */
+      left: 10px !important; /* Top Left */
       height: 240px !important;
       width: auto !important;
     }
     #custom-home-btn {
       position: absolute !important;
-      top: 175px !important; /* Below the native tools */
-      right: 10px !important; /* Set to Top Right */
+      top: 175px !important; /* Safely below the native tools */
+      right: 10px !important; /* Top Right */
     }
   }
 
@@ -50,39 +50,33 @@ style.innerHTML = `
     #custom-map-logo {
       position: fixed !important; 
       top: 10px !important;
-      left: 10px !important; /* Set to Top Left */
-      height: 180px !important; /* Your ideal 180px scale */
+      left: 10px !important; /* Top Left */
+      height: 180px !important; /* Your proven 180px scale */
       width: auto !important;
     }
     #custom-home-btn {
       position: fixed !important; 
-      top: 175px !important; /* Below the native tools */
-      right: 10px !important; /* Set to Top Right */
+      top: 175px !important; 
+      right: 10px !important; /* Top Right */
     }
   }
 
-  /* --- GENTLE NATIVE CONTROL SHIFT --- */
-  /* Move qgis2web's native top-left controls to the right corner without breaking mobile layouts */
+  /* --- THE SIMPLE NATIVE SHIFT --- */
+  /* Slide the invisible left container to the right edge. Leaves internal qgis2web formatting 100% untouched. */
   .leaflet-top.leaflet-left {
     left: auto !important;
     right: 0px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important; /* Flexbox safely aligns items to the right edge */
-    max-width: 100vw !important; /* Prevents 100%-width titles from shooting offscreen */
-    pointer-events: none !important; /* Allows map clicks to pass through the empty container space */
   }
   
-  .leaflet-top.leaflet-left .leaflet-control {
-    margin-left: 0 !important;
-    margin-right: 10px !important;
-    float: none !important; /* Strips any floats that might crash mobile formatting */
-    pointer-events: auto !important; /* Restores clickability to the buttons themselves */
+  /* Slide the right container to the left, just in case qgis2web put anything over there */
+  .leaflet-top.leaflet-right {
+    right: auto !important;
+    left: 0px !important;
   }
 `;
 document.head.appendChild(style);
 
-// 2. Dynamic Placement Logic for Custom Elements
+// 2. Dynamic Placement Logic for Custom Elements (Your proven method)
 function setupResponsiveOverlays() {
     // Create Logo
     var logo = document.getElementById('custom-map-logo');
@@ -108,14 +102,16 @@ function setupResponsiveOverlays() {
         };
     }
 
-    // Decide where to attach our custom elements based on screen size
+    // Attach based on screen size
     var isMobile = window.innerWidth <= 768;
     var mapBox = document.getElementById('map');
 
     if (isMobile) {
+        // Your proven mobile method
         document.body.appendChild(logo);
         document.body.appendChild(homeBtn);
     } else {
+        // Standard desktop method
         if (!mapBox) {
             setTimeout(setupResponsiveOverlays, 50); 
             return;
@@ -129,7 +125,7 @@ function setupResponsiveOverlays() {
 // Run immediately
 setupResponsiveOverlays();
 
-// 3. Listen for screen resizing (e.g., rotating a tablet)
+// 3. Listen for screen resizing
 window.addEventListener('resize', function() {
     var isMobile = window.innerWidth <= 768;
     var logo = document.getElementById('custom-map-logo');
