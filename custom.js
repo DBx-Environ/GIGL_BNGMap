@@ -131,38 +131,42 @@ function setupLiveData() {
         var basicData = parseCSV(files[0]);
         var habitatData = parseCSV(files[1]);
         
-        // Build a lookup dictionary keyed by SZCode
         window.liveZoneData = {};
         
-        function mergeIntoLookup(dataArray) {
+        // This function merges the data and prevents columns with the same name from overwriting each other
+        function mergeIntoLookup(dataArray, prefix) {
             dataArray.forEach(function(row) {
-                // Find the SZCode column automatically (ignoring spaces/case)
-                var szKey = Object.keys(row).find(k => k.replace(/\s/g, '').toLowerCase() === 'szcode');
+                // Find SZCode automatically, completely ignoring spaces, case, and invisible Excel characters
+                var szKey = Object.keys(row).find(k => k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === 'szcode');
+                
                 if (szKey && row[szKey]) {
                     var code = parseFloat(row[szKey]);
                     if (!window.liveZoneData[code]) window.liveZoneData[code] = {};
-                    // Copy all spreadsheet columns into memory
+                    
+                    // Copy columns into memory, attaching the file prefix so QGIS recognizes it perfectly
                     for (var k in row) {
-                        window.liveZoneData[code][k] = row[k];
+                        var cleanColName = k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                        if (cleanColName !== 'szcode') {
+                            window.liveZoneData[code][prefix + cleanColName] = row[k];
+                        }
                     }
                 }
             });
         }
 
-        mergeIntoLookup(basicData);
-        mergeIntoLookup(habitatData);
+        // Merge both files, tagging them with the exact prefixes qgis2web uses
+        mergeIntoLookup(basicData, "basicmapdataexport");
+        mergeIntoLookup(habitatData, "broadhabitatbysz");
 
         // Intercept popups opening and inject live data
         map.on('popupopen', function(e) {
             var feature = e.popup._source.feature;
             if (!feature || !feature.properties || feature.properties.SZCode == null) return;
             
-            // Get the ID of the clicked zone
             var szCode = parseFloat(feature.properties.SZCode);
             var liveRow = window.liveZoneData[szCode];
-            if (!liveRow) return; // No live data found, fallback to qgis2web static data
+            if (!liveRow) return;
 
-            // Find the table inside the popup
             var popupNode = document.querySelector('.leaflet-popup-content');
             if (!popupNode) return;
             
@@ -172,14 +176,20 @@ function setupLiveData() {
                 var td = row.querySelector('td');
                 if (!th || !td) return;
                 
-                var label = th.innerText.trim();
+                // Clean the popup label to match our sanitized CSV columns
+                var cleanLabel = th.innerText.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
                 
-                // Match popup rows to CSV columns intelligently (handles QGIS aliases safely)
-                for (var csvColName in liveRow) {
-                    if (label === csvColName || csvColName.endsWith(label) || label.endsWith(csvColName)) {
-                        // Override the static html with the LIVE spreadsheet number!
-                        td.innerHTML = liveRow[csvColName];
-                        break; 
+                // 1. Try to match the exact QGIS name (e.g. BasicMapDataExportArea)
+                if (liveRow[cleanLabel] !== undefined) {
+                    td.innerHTML = liveRow[cleanLabel];
+                } 
+                // 2. Fallback: If QGIS just output "Area", find the closest match
+                else {
+                    for (var liveKey in liveRow) {
+                        if (liveKey.endsWith(cleanLabel) || cleanLabel.endsWith(liveKey)) {
+                            td.innerHTML = liveRow[liveKey];
+                            break; 
+                        }
                     }
                 }
             });
@@ -190,8 +200,11 @@ function setupLiveData() {
     });
 }
 
-// Robust CSV Parser (Handles spaces, quotes, and commas safely)
+// Robust CSV Parser (Safely handles spaces, quotes, commas, and invisible Excel formatting)
 function parseCSV(text) {
+    // CRITICAL: Strip the invisible BOM character Excel adds to the first column name
+    text = text.replace(/^\uFEFF/, '');
+    
     var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
     if (lines.length === 0) return [];
     
