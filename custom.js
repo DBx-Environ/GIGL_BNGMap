@@ -41,7 +41,7 @@ style.innerHTML = `
     #custom-home-btn {
       position: absolute !important;
       top: 175px !important; /* Pushed down to clear the 3px overlap */
-      left: 12px !important; /* Shifted right by 3px to align flush with magnifying glass */
+      left: 11px !important; /* Shifted right by 3px to align flush with magnifying glass */
     }
   }
 
@@ -57,7 +57,7 @@ style.innerHTML = `
     #custom-home-btn {
       position: fixed !important; /*[cite: 2] */
       top: 175px !important; 
-      left: 15px !important; 
+      left: 16px !important; 
     }
   }
 `;
