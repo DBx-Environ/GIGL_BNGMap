@@ -82,7 +82,7 @@ padding: 0 !important;
 
 #custom-map-logo {
 
-height: 120px !important;
+height: 180px !important;
 
 }
 
