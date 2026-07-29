@@ -112,17 +112,15 @@ window.addEventListener('resize', attachOverlays);
 
 
 // =========================================================
-// 3. LIVE CSV DATA INJECTOR (Bypasses qgis2web data limits)
+// 3. LIVE CSV DATA INJECTOR (Direct Mapping Fix)
 // =========================================================
 
 function setupLiveData() {
-    // Wait for the map to finish loading
     if (typeof map === 'undefined') {
         setTimeout(setupLiveData, 100);
         return;
     }
 
-    // Fetch the live CSV files directly from your folder
     Promise.all([
         fetch('BasicMapDataExport.csv').then(function(res) { return res.ok ? res.text() : ""; }),
         fetch('BroadHabitatbySZ.csv').then(function(res) { return res.ok ? res.text() : ""; })
@@ -133,32 +131,32 @@ function setupLiveData() {
         
         window.liveZoneData = {};
         
-        // This function merges the data and prevents columns with the same name from overwriting each other
-        function mergeIntoLookup(dataArray, prefix) {
-            dataArray.forEach(function(row) {
-                // Find SZCode automatically, completely ignoring spaces, case, and invisible Excel characters
-                var szKey = Object.keys(row).find(k => k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === 'szcode');
-                
-                if (szKey && row[szKey]) {
-                    var code = parseFloat(row[szKey]);
-                    if (!window.liveZoneData[code]) window.liveZoneData[code] = {};
-                    
-                    // Copy columns into memory, attaching the file prefix so QGIS recognizes it perfectly
-                    for (var k in row) {
-                        var cleanColName = k.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                        if (cleanColName !== 'szcode') {
-                            window.liveZoneData[code][prefix + cleanColName] = row[k];
-                        }
+        // Map Basic Map Data
+        basicData.forEach(function(row) {
+            var szCode = parseFloat(row['SZCode']);
+            if (!isNaN(szCode)) {
+                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
+                window.liveZoneData[szCode]['BasicMapDataExport_Area'] = row['Area'];
+                window.liveZoneData[szCode]['BasicMapDataExport_Hedgerow'] = row['Hedgerow'];
+                window.liveZoneData[szCode]['BasicMapDataExport_Watercourse'] = row['Watercourse'];
+                window.liveZoneData[szCode]['BasicMapDataExport_PopHeader'] = row['PopHeader'];
+            }
+        });
+
+        // Map Broad Habitats Data
+        habitatData.forEach(function(row) {
+            var szCode = parseFloat(row['SZCode']);
+            if (!isNaN(szCode)) {
+                if (!window.liveZoneData[szCode]) window.liveZoneData[szCode] = {};
+                for (var key in row) {
+                    if (key !== 'SZCode' && key !== 'LPA' && key !== 'NCA') {
+                        window.liveZoneData[szCode]['BroadHabitatbySZ_' + key] = row[key];
                     }
                 }
-            });
-        }
+            }
+        });
 
-        // Merge both files, tagging them with the exact prefixes qgis2web uses
-        mergeIntoLookup(basicData, "basicmapdataexport");
-        mergeIntoLookup(habitatData, "broadhabitatbysz");
-
-        // Intercept popups opening and inject live data
+        // Intercept popup rendering
         map.on('popupopen', function(e) {
             var feature = e.popup._source.feature;
             if (!feature || !feature.properties || feature.properties.SZCode == null) return;
@@ -176,35 +174,26 @@ function setupLiveData() {
                 var td = row.querySelector('td');
                 if (!th || !td) return;
                 
-                // Clean the popup label to match our sanitized CSV columns
-                var cleanLabel = th.innerText.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                var label = th.innerText.trim();
                 
-                // 1. Try to match the exact QGIS name (e.g. BasicMapDataExportArea)
-                if (liveRow[cleanLabel] !== undefined) {
-                    td.innerHTML = liveRow[cleanLabel];
-                } 
-                // 2. Fallback: If QGIS just output "Area", find the closest match
-                else {
-                    for (var liveKey in liveRow) {
-                        if (liveKey.endsWith(cleanLabel) || cleanLabel.endsWith(liveKey)) {
-                            td.innerHTML = liveRow[liveKey];
-                            break; 
-                        }
+                // Check if this row matches any of our known data fields based on popup labels
+                for (var propKey in liveRow) {
+                    if (label.includes(propKey.replace(/_/g, ' ')) || propKey.endsWith(label)) {
+                        td.innerHTML = liveRow[propKey];
+                        break;
                     }
                 }
             });
         });
     })
     .catch(function(err) {
-        console.error("Custom.js: Could not load live CSV data.", err);
+        console.error("Custom.js: Live data error.", err);
     });
 }
 
-// Robust CSV Parser (Safely handles spaces, quotes, commas, and invisible Excel formatting)
+// Robust CSV Parser
 function parseCSV(text) {
-    // CRITICAL: Strip the invisible BOM character Excel adds to the first column name
     text = text.replace(/^\uFEFF/, '');
-    
     var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
     if (lines.length === 0) return [];
     
@@ -241,5 +230,4 @@ function parseCSVLine(text) {
     return ret.map(function(v) { return v.trim(); });
 }
 
-// Initialize Live Data
 setupLiveData();
