@@ -1,4 +1,12 @@
-// 1. CSS Rules for PC & Mobile
+// 1. Ensure Viewport Meta Tag exists (Crucial for mobile Media Queries to fire)
+if (!document.querySelector('meta[name="viewport"]')) {
+    var meta = document.createElement('meta');
+    meta.name = "viewport";
+    meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+    document.head.appendChild(meta);
+}
+
+// 2. CSS Rules for PC & Mobile
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
@@ -16,6 +24,8 @@ style.innerHTML = `
     border-radius: 4px !important;
     z-index: 99999 !important;
     pointer-events: none !important;
+    /* Adding transition makes the resize smooth if a user resizes their desktop browser */
+    transition: height 0.3s ease; 
   }
 
   /* Home Button: Locked inside top-left of map */
@@ -47,24 +57,30 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-// 2. Attach Elements Inside the Map Container
+// 3. Attach Elements Inside the Map Container
 function setupMapOverlays() {
     var mapBox = document.getElementById('map') || document.body;
 
     // Ensure map box allows absolute positioning
-    if (mapBox) {
+    if (mapBox && mapBox !== document.body) {
         mapBox.style.position = 'relative';
-    } else {
+    } else if (!document.getElementById('map')) {
         setTimeout(setupMapOverlays, 50);
         return;
     }
 
-    // Attach Logo (with automatic web fallback if local image is missing)
+    // Attach Logo
     if (!document.getElementById('custom-map-logo')) {
         var logo = document.createElement('img');
         logo.id = 'custom-map-logo';
+        // Note: Your prompt mentioned logo.png but the code uses Map.png. Update this URL if needed.
         logo.src = 'https://raw.githubusercontent.com/DBx-Environ/MapImages/main/Map.png';
-        logo.onerror = function() { this.src = 'Map.png'; };
+        
+        // Safety fix: nullify onerror before assigning fallback to prevent infinite loops
+        logo.onerror = function() { 
+            this.onerror = null; 
+            this.src = 'logo.png'; 
+        };
         mapBox.appendChild(logo);
     }
 
@@ -76,7 +92,10 @@ function setupMapOverlays() {
         homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
 
         function resetView(e) {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevents map clicks passing through the button
+            }
             if (typeof map !== 'undefined' && map.setView) {
                 map.setView([53.0, 0.5], 8.6);
             }
