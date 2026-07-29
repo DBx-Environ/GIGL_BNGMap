@@ -5,7 +5,7 @@ style.innerHTML = `
 
   /* Desktop Logo (240px) */
   #custom-map-logo {
-    position: absolute !important; /* Changed to absolute to lock inside the map */
+    position: absolute !important;
     top: 10px !important;
     right: 10px !important;
     height: 240px !important;
@@ -20,7 +20,7 @@ style.innerHTML = `
 
   /* Home Button */
   #custom-home-btn {
-    position: absolute !important; /* Changed to absolute */
+    position: absolute !important;
     top: 165px !important;
     left: 10px !important;
     width: 36px !important;
@@ -35,36 +35,38 @@ style.innerHTML = `
     justify-content: center !important;
     cursor: pointer !important;
     padding: 0 !important;
+    pointer-events: auto !important; /* Critical to ensure button remains clickable in UI layer */
   }
 
   /* Mobile Adjustment (Screens under 768px) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 120px !important; /* Scaled to exact requested mobile height */
+      height: 120px !important; /* Exact mobile height requested */
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Safely attach elements to the Map Container
+// 2. Attach elements safely to the Leaflet UI layer
 function attachOverlays() {
-    var mapContainer = document.getElementById('map');
+    // Target Leaflet's dedicated UI container instead of the base #map div
+    var uiContainer = document.querySelector('.leaflet-control-container');
     
-    // If the map isn't rendered yet, wait 50ms and try again
-    if (!mapContainer) {
+    // If Leaflet hasn't built the UI yet, wait 50ms and try again
+    if (!uiContainer) {
         setTimeout(attachOverlays, 50);
         return;
     }
 
-    // Attach Logo directly to map container
+    // Attach Logo
     if (!document.getElementById('custom-map-logo')) {
         var logo = document.createElement('img');
         logo.id = 'custom-map-logo';
         logo.src = 'Map.png';
-        mapContainer.appendChild(logo);
+        uiContainer.appendChild(logo);
     }
 
-    // Attach Home Button directly to map container
+    // Attach Home Button
     if (!document.getElementById('custom-home-btn')) {
         var homeBtn = document.createElement('button');
         homeBtn.id = 'custom-home-btn';
@@ -74,13 +76,13 @@ function attachOverlays() {
         homeBtn.onclick = function(e) {
             if (e) {
                 e.preventDefault();
-                e.stopPropagation(); // Prevents clicking the map behind the button
+                e.stopPropagation(); // Stops accidental map clicks behind the button
             }
             if (typeof map !== 'undefined') {
-                map.setView([53.1, 0], 8.6);
+                map.setView([53.2005, -0.2530], 8.6);
             }
         };
-        mapContainer.appendChild(homeBtn);
+        uiContainer.appendChild(homeBtn);
     }
 }
 
