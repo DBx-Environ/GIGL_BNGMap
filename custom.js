@@ -32,32 +32,32 @@ style.innerHTML = `
   /* DESKTOP RULES (Above 768px) */
   @media screen and (min-width: 769px) {
     #custom-map-logo {
-      position: absolute !important; /* Locks perfectly to the map container */
+      position: absolute !important;
       top: 10px !important;
-      right: 10px !important;
+      left: 10px !important; /* Moved to Top Left */
       height: 240px !important;
       width: auto !important;
     }
     #custom-home-btn {
-      position: absolute !important; /* Locks perfectly to the map container */
-      top: 165px !important;
-      left: 10px !important;
+      position: absolute !important;
+      top: 175px !important; /* Pushed down to fix the 3px overlap */
+      right: 10px !important; /* Moved to Top Right */
     }
   }
 
   /* MOBILE RULES (768px and under) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      position: fixed !important; /* Bypasses mobile map container issues */
+      position: fixed !important; 
       top: 10px !important;
-      right: 10px !important;
-      height: 180px !important; /* Updated to your ideal mobile size */
+      left: 10px !important; /* Moved to Top Left */
+      height: 180px !important; 
       width: auto !important;
     }
     #custom-home-btn {
-      position: fixed !important; /* Bypasses mobile map container issues */
-      top: 165px !important;
-      left: 10px !important;
+      position: fixed !important; 
+      top: 175px !important; /* Pushed down to fix the 3px overlap */
+      right: 10px !important; /* Moved to Top Right (fixes horizontal alignment automatically) */
     }
   }
 `;
@@ -89,30 +89,42 @@ function setupResponsiveOverlays() {
         };
     }
 
-    // Decide where to attach them based on screen size
+    // Decide where to attach our custom elements based on screen size
     var isMobile = window.innerWidth <= 768;
     var mapBox = document.getElementById('map');
 
     if (isMobile) {
-        // MOBILE: Attach to body (Your proven method)
         document.body.appendChild(logo);
         document.body.appendChild(homeBtn);
     } else {
-        // DESKTOP: Attach to map container
         if (!mapBox) {
-            setTimeout(setupResponsiveOverlays, 50); // Wait for map to load
+            setTimeout(setupResponsiveOverlays, 50); 
             return;
         }
-        mapBox.style.position = 'relative'; // Ensure absolute positioning works
+        mapBox.style.position = 'relative'; 
         mapBox.appendChild(logo);
         mapBox.appendChild(homeBtn);
     }
+
+    // 3. Move native QGIS/Leaflet controls (+/- and Search) to the Top Right
+    // We use a small timeout to ensure Leaflet has finished building its interface first
+    setTimeout(function() {
+        var topLeftContainer = document.querySelector('.leaflet-top.leaflet-left');
+        var topRightContainer = document.querySelector('.leaflet-top.leaflet-right');
+        
+        if (topLeftContainer && topRightContainer) {
+            // Move everything from the left container to the right container
+            while (topLeftContainer.firstChild) {
+                topRightContainer.appendChild(topLeftContainer.firstChild);
+            }
+        }
+    }, 500);
 }
 
 // Run immediately
 setupResponsiveOverlays();
 
-// 3. Listen for screen resizing (e.g., rotating a tablet)
+// 4. Listen for screen resizing (e.g., rotating a tablet)
 window.addEventListener('resize', function() {
     var isMobile = window.innerWidth <= 768;
     var logo = document.getElementById('custom-map-logo');
