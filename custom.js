@@ -41,7 +41,7 @@ style.innerHTML = `
   /* Mobile Adjustment (Screens under 768px) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      height: 120px !important; /* Exact mobile height requested */
+      height: 90px !important; /* Exact mobile height requested */
     }
   }
 `;
@@ -79,7 +79,7 @@ function attachOverlays() {
                 e.stopPropagation(); // Stops accidental map clicks behind the button
             }
             if (typeof map !== 'undefined') {
-                map.setView([53.2005, -0.2530], 8.6);
+                map.setView([53.1, 0], 8.6);
             }
         };
         uiContainer.appendChild(homeBtn);
