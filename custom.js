@@ -1,4 +1,6 @@
-// 1. Popup CSS & Responsive Overlay Rules
+// =========================================================
+// 1. Popup CSS & Responsive Overlay Rules (Layout)
+// =========================================================
 var style = document.createElement('style');
 style.innerHTML = `
   .leaflet-popup-content { font-size: 9px !important; max-height: 98px !important; overflow: auto !important; }
@@ -32,73 +34,70 @@ style.innerHTML = `
   /* DESKTOP RULES (Above 768px) */
   @media screen and (min-width: 769px) {
     #custom-map-logo {
-      position: absolute !important; /* Locks safely inside map container */
+      position: absolute !important; 
       top: 10px !important;
-      right: 10px !important; /* Top Right */
-      height: 240px !important; /* Fixed Desktop Logo (240px) */ /*[cite: 2] */
+      right: 10px !important; 
+      height: 240px !important; 
       width: auto !important;
     }
     #custom-home-btn {
       position: absolute !important;
-      top: 175px !important; /* Pushed down to clear the 3px overlap */
-      left: 11px !important; /* Shifted right by 3px to align flush with magnifying glass */
+      top: 175px !important; 
+      left: 13px !important; 
     }
   }
 
   /* MOBILE RULES (768px and under) */
   @media screen and (max-width: 768px) {
     #custom-map-logo {
-      position: fixed !important; /* Bypasses mobile map container limits */ /*[cite: 2] */
+      position: fixed !important; 
       top: 10px !important;
-      right: 10px !important; /* Top Right */
-      height: 180px !important; /* Mobile Adjustment */ /*[cite: 2] */
+      right: 10px !important; 
+      height: 180px !important; 
       width: auto !important;
     }
     #custom-home-btn {
-      position: fixed !important; /*[cite: 2] */
+      position: fixed !important; 
       top: 175px !important; 
-      left: 16px !important; 
+      left: 13px !important; 
     }
   }
 `;
 document.head.appendChild(style);
 
-// 2. Attach Elements (Your proven method)
+// =========================================================
+// 2. Attach Layout Overlays
+// =========================================================
 function attachOverlays() {
     var isMobile = window.innerWidth <= 768;
     var mapBox = document.getElementById('map');
 
-    // Create Logo
     var logo = document.getElementById('custom-map-logo');
     if (!logo) {
         logo = document.createElement('img');
         logo.id = 'custom-map-logo';
-        logo.src = 'Map.png'; /*[cite: 2] */
+        logo.src = 'Map.png'; 
     }
 
-    // Create Home Button
     var homeBtn = document.getElementById('custom-home-btn');
     if (!homeBtn) {
         homeBtn = document.createElement('button');
         homeBtn.id = 'custom-home-btn';
         homeBtn.title = 'Reset to County Extent';
-        homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'; /*[cite: 2] */
+        homeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'; 
         
         homeBtn.onclick = function(e) {
-            if (e) e.preventDefault(); /*[cite: 2] */
+            if (e) e.preventDefault(); 
             if (typeof map !== 'undefined') {
-                map.setView([53.1, 0], 8.6); /*[cite: 2] */
+                map.setView([53.1, 0], 8.6); 
             }
         };
     }
 
-    // Attach dynamically based on screen size
     if (isMobile) {
-        // Mobile attaches to document body /*[cite: 2] */
         document.body.appendChild(logo); 
         document.body.appendChild(homeBtn); 
     } else {
-        // Desktop attaches to map container
         if (!mapBox) {
             setTimeout(attachOverlays, 50);
             return;
@@ -108,9 +107,126 @@ function attachOverlays() {
         mapBox.appendChild(homeBtn);
     }
 }
-
-// Run immediately
 attachOverlays();
-
-// 3. Listen for screen resizing to instantly snap them to the right layer
 window.addEventListener('resize', attachOverlays);
+
+
+// =========================================================
+// 3. LIVE CSV DATA INJECTOR (Bypasses qgis2web data limits)
+// =========================================================
+
+function setupLiveData() {
+    // Wait for the map to finish loading
+    if (typeof map === 'undefined') {
+        setTimeout(setupLiveData, 100);
+        return;
+    }
+
+    // Fetch the live CSV files directly from your folder
+    Promise.all([
+        fetch('BasicMapDataExport.csv').then(function(res) { return res.ok ? res.text() : ""; }),
+        fetch('BroadHabitatbySZ.csv').then(function(res) { return res.ok ? res.text() : ""; })
+    ])
+    .then(function(files) {
+        var basicData = parseCSV(files[0]);
+        var habitatData = parseCSV(files[1]);
+        
+        // Build a lookup dictionary keyed by SZCode
+        window.liveZoneData = {};
+        
+        function mergeIntoLookup(dataArray) {
+            dataArray.forEach(function(row) {
+                // Find the SZCode column automatically (ignoring spaces/case)
+                var szKey = Object.keys(row).find(k => k.replace(/\s/g, '').toLowerCase() === 'szcode');
+                if (szKey && row[szKey]) {
+                    var code = parseFloat(row[szKey]);
+                    if (!window.liveZoneData[code]) window.liveZoneData[code] = {};
+                    // Copy all spreadsheet columns into memory
+                    for (var k in row) {
+                        window.liveZoneData[code][k] = row[k];
+                    }
+                }
+            });
+        }
+
+        mergeIntoLookup(basicData);
+        mergeIntoLookup(habitatData);
+
+        // Intercept popups opening and inject live data
+        map.on('popupopen', function(e) {
+            var feature = e.popup._source.feature;
+            if (!feature || !feature.properties || feature.properties.SZCode == null) return;
+            
+            // Get the ID of the clicked zone
+            var szCode = parseFloat(feature.properties.SZCode);
+            var liveRow = window.liveZoneData[szCode];
+            if (!liveRow) return; // No live data found, fallback to qgis2web static data
+
+            // Find the table inside the popup
+            var popupNode = document.querySelector('.leaflet-popup-content');
+            if (!popupNode) return;
+            
+            var rows = popupNode.querySelectorAll('tr');
+            rows.forEach(function(row) {
+                var th = row.querySelector('th');
+                var td = row.querySelector('td');
+                if (!th || !td) return;
+                
+                var label = th.innerText.trim();
+                
+                // Match popup rows to CSV columns intelligently (handles QGIS aliases safely)
+                for (var csvColName in liveRow) {
+                    if (label === csvColName || csvColName.endsWith(label) || label.endsWith(csvColName)) {
+                        // Override the static html with the LIVE spreadsheet number!
+                        td.innerHTML = liveRow[csvColName];
+                        break; 
+                    }
+                }
+            });
+        });
+    })
+    .catch(function(err) {
+        console.error("Custom.js: Could not load live CSV data.", err);
+    });
+}
+
+// Robust CSV Parser (Handles spaces, quotes, and commas safely)
+function parseCSV(text) {
+    var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() !== ''; });
+    if (lines.length === 0) return [];
+    
+    var headers = parseCSVLine(lines[0]);
+    var result = [];
+    
+    for (var i = 1; i < lines.length; i++) {
+        var cols = parseCSVLine(lines[i]);
+        var obj = {};
+        for (var j = 0; j < headers.length; j++) {
+            obj[headers[j]] = cols[j] || "";
+        }
+        result.push(obj);
+    }
+    return result;
+}
+
+function parseCSVLine(text) {
+    var ret = [], inQuote = false, value = '';
+    for (var i = 0; i < text.length; i++) {
+        var c = text[i];
+        if (inQuote) {
+            if (c === '"') {
+                if (i + 1 < text.length && text[i+1] === '"') { value += '"'; i++; }
+                else { inQuote = false; }
+            } else { value += c; }
+        } else {
+            if (c === '"') { inQuote = true; }
+            else if (c === ',') { ret.push(value); value = ''; }
+            else { value += c; }
+        }
+    }
+    ret.push(value);
+    return ret.map(function(v) { return v.trim(); });
+}
+
+// Initialize Live Data
+setupLiveData();
