@@ -34,14 +34,14 @@ style.innerHTML = `
     #custom-map-logo {
       position: absolute !important;
       top: 10px !important;
-      left: 10px !important; /* Moved to Top Left */
+      left: 10px !important; /* Top Left */
       height: 240px !important;
       width: auto !important;
     }
     #custom-home-btn {
       position: absolute !important;
-      top: 175px !important; /* Pushed down to fix the 3px overlap */
-      right: 10px !important; /* Moved to Top Right */
+      top: 175px !important; 
+      right: 10px !important; /* Top Right */
     }
   }
 
@@ -50,15 +50,45 @@ style.innerHTML = `
     #custom-map-logo {
       position: fixed !important; 
       top: 10px !important;
-      left: 10px !important; /* Moved to Top Left */
-      height: 180px !important; 
+      left: 10px !important; /* Top Left */
+      height: 180px !important; /* 180px scale */
       width: auto !important;
     }
     #custom-home-btn {
       position: fixed !important; 
-      top: 175px !important; /* Pushed down to fix the 3px overlap */
-      right: 10px !important; /* Moved to Top Right (fixes horizontal alignment automatically) */
+      top: 175px !important; 
+      right: 10px !important; /* Top Right */
     }
+  }
+
+  /* --- THE CSS FLIP: Safely swap Leaflet corners without breaking mobile scripts --- */
+  
+  /* 1. Visually force the Top-Left container to the right side */
+  .leaflet-top.leaflet-left {
+    left: auto !important;
+    right: 0px !important;
+    z-index: 9999 !important; 
+  }
+  /* Fix the alignment of items inside it so they hug the right wall */
+  .leaflet-top.leaflet-left .leaflet-control {
+    float: right !important;
+    clear: both !important;
+    margin-right: 10px !important;
+    margin-left: 0 !important;
+  }
+
+  /* 2. Move the original Top-Right container to the left side (prevents overlap) */
+  .leaflet-top.leaflet-right {
+    right: auto !important;
+    left: 0px !important;
+    top: 260px !important; /* Pushed down safely below your custom logo */
+  }
+  /* Fix alignment for any layers/controls that were in the top right */
+  .leaflet-top.leaflet-right .leaflet-control {
+    float: left !important;
+    clear: both !important;
+    margin-left: 10px !important;
+    margin-right: 0 !important;
   }
 `;
 document.head.appendChild(style);
@@ -105,26 +135,12 @@ function setupResponsiveOverlays() {
         mapBox.appendChild(logo);
         mapBox.appendChild(homeBtn);
     }
-
-    // 3. Move native QGIS/Leaflet controls (+/- and Search) to the Top Right
-    // We use a small timeout to ensure Leaflet has finished building its interface first
-    setTimeout(function() {
-        var topLeftContainer = document.querySelector('.leaflet-top.leaflet-left');
-        var topRightContainer = document.querySelector('.leaflet-top.leaflet-right');
-        
-        if (topLeftContainer && topRightContainer) {
-            // Move everything from the left container to the right container
-            while (topLeftContainer.firstChild) {
-                topRightContainer.appendChild(topLeftContainer.firstChild);
-            }
-        }
-    }, 500);
 }
 
 // Run immediately
 setupResponsiveOverlays();
 
-// 4. Listen for screen resizing (e.g., rotating a tablet)
+// 3. Listen for screen resizing (e.g., rotating a tablet)
 window.addEventListener('resize', function() {
     var isMobile = window.innerWidth <= 768;
     var logo = document.getElementById('custom-map-logo');
